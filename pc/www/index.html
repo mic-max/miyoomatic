@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <title>Pokemon Encounter</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="img/icon.png">
+</head>
+<body>
+  <div class="background"></div>
+  <div class="fog"></div>
+  <!-- <h1>Encounter Overlay</h1>
+  <input id="msg" placeholder="Type a message">
+  <button onclick="sendMessage()">Send</button>
+  <ul id="chat"></ul> -->
+
+  <!-- https://veekun.com/dex/locations/pok%C3%A9mon%20tower#area:3F -->
+  <!-- https://www.serebii.net/pokearth/kanto/3rd/pokemontower.shtml#joh-3f -->
+  <!-- all have 1:1 gender ratio -->
+  <!-- odds of encountering a shiny pokemon: 1/8192 -->
+  <!-- show expected hunt duration and invidiual encounter durations -->
+  <!-- 3d gif of the shiny pokemon(s) im hunting -->
+  <!-- animate a +1 next to value's increasing -- or a flip clock style animation -->
+  <!-- solenoid activation counter, individual and total (since over half of the inputs are the A button) -->
+  <!-- include twitch/yt chats -->
+  <!-- show the script -- button presses and times and delays -->
+
+  <h1>Encounter #5142</h1>
+  <h2>Pokemon Fire Red GBA</h2>
+  <table>
+     <caption>
+       <select>
+          <!-- TODO: load these from the locations table -->
+          <!-- TODO: onchange load the new content into tbody -->
+          <!-- TODO: allow this select box value to be specified from url. like index.html/pokemon-tower-3f/ for example -->
+          <option>Pokemon Tower 3F</option>
+        </select>
+      </caption>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Level</th>
+        <th colspan="2">Gender</th>
+        <th>Odds</th>
+      </tr>
+    </thead>
+    <tbody id="encounter-tbody"></tbody>
+  </table>
+
+  <div>
+    <button onclick="clearEncounterRun();">Clear</button>
+    <h3 id="timer">00:00</h3>
+  </div>
+
+  <div class="queue-wrapper">
+    <div class="queue" id="queue"></div>
+  </div>
+
+  <button onclick="addItem('img/pokemon/cubone.png', Math.round(Math.random() * 20) + 10, Math.random() > 0.5);">Add</button>
+
+  <!-- TODO: set track to the selected location -->
+  <div>
+    <audio id="music" controls loop> <!-- autoplay -->
+      <source src="audio/pokemon-tower.mp3" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
+  </div>
+
+  <footer>
+    <a href="https://github.com/mic-max/miyoomatic">GitHub Repository</a>
+    <a href="https://micmax.pw/#TODO">Blog Post</a>
+    <!-- TODO: links to 3d models -->
+    <p>Shoutout Jon for the dope Christmas present!</p>
+  </footer>
+
+  <script src="index.js"></script>
+</body>
+</html>

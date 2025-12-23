@@ -1,0 +1,132 @@
+:root {
+  --male: #778de6;
+  --female: #e77e66;
+  --offwhite: #f8f8f8;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+@font-face {
+    font-family: 'Pokemon Fire Red';
+    src: url('fonts/pokemon_fire_red.woff');
+}
+
+body {
+    font-family: "Pokemon Fire Red", monospace;
+    /* background: url("img/tiles/pokemon-tower.png"); */
+    position: relative;
+    padding: 20px;
+}
+
+.background {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url("img/tiles/pokemon-tower.png");
+    /* TODO: add tombstone.png */
+    z-index: -2; /* behind everything */
+  }
+
+  /* Fog overlay (only above background) */
+  .fog {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url("img/tiles/fog.jpg") repeat;
+    opacity: 0.5;
+    animation: drift 30s linear infinite;
+    z-index: -1; /* above background, below content */
+    pointer-events: none;
+  }
+
+@keyframes drift {
+    from { background-position: 0 0; }
+    to   { background-position: -1000px 0; }
+}
+
+.types img {
+    padding-right: 2px;
+}
+
+#demo {
+    font-size: 32pt;
+}
+
+.queue-wrapper {
+    width: 640px;  /* 10 items × (55px each incl. margin) */
+    height: 88px;
+    overflow: hidden;
+    background: var(--offwhite);
+    border: 8px solid transparent;
+    border-image: url("img/borders/yellow.png") 8 space;
+    border-radius: 12px;
+}
+
+.queue {
+    display: flex;
+    justify-content: flex-end; /* align items to the right */
+    position: relative;
+}
+
+.item {
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 5px;
+    transition: transform 0.5s ease;
+}
+
+.pokemon {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* center everything horizontally */
+    width: 120px;        /* optional fixed width */
+}
+
+td:nth-child(2) {
+  color: var(--male);
+}
+
+td:nth-child(3) {
+  color: var(--female);
+}
+
+td {
+  vertical-align: top;
+}
+
+.male {
+    color: var(--male);
+}
+
+.female {
+    color: var(--female);
+}
+
+button {
+    margin: 20px;
+    padding: 8px;
+    width: 100px;
+    color: green;
+    background-color: aquamarine;
+}
+
+table {
+    border: 8px solid transparent;
+    border-image: url("img/borders/yellow.png") 8 space;
+    width: 272px; /* must be a multiple or 8 otherwise there will be gaps in border */
+    height: 440px;
+    background: var(--offwhite);
+    border-radius: 12px;
+}
+
+th {
+    color: darkslategrey;
+}
+
+td {
+  text-align: end; 
+}
