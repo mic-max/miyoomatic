@@ -11,11 +11,14 @@ Play a Miyoo handheld console automatically with solenoids and a webcam.
 
 [FireRed ROM](https://vimm.net/vault/5626)
 
-## PC Setup
+## PC First Time Setup
 1. `sqlite3 -init pc/setup.sql miyoomatic.db .quit`
 1. `python -m venv myenv`
 1. `./venv/Scripts/Activate.ps1`
-1. `pip install -r requirements.txt`
+1. `pip install -r pc/src/requirements.txt`
+
+## Subsequent Setup
+1. `./venv/Scripts/Activate.ps1`
 1. `ruff check`
 1. `python pc/src/main.py`
 
@@ -60,6 +63,9 @@ pointers are 24 bit?
   - This lets the program best detect the screen's border
 - Image Detection Issues
   - Clean the webcam lens and the screen
+
+## Testing
+- Add unit tests
 
 ## Resources
 <!-- TODO include all resourced I used to build this program and learning references used -->
