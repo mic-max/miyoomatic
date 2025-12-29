@@ -22,18 +22,6 @@ def get_id_from_name(conn: sqlite3.Connection, name: str) -> int | None:
     row = cur.fetchone()
     return row[0] if row else None
 
-def get_palettes(conn: sqlite3.Connection, pokemon_ids: List[int]):
-    """
-    Returns the unique colors in this pokemon's palette that are not present in the shiny
-    version if is_shiny is False, or vice versa if True.
-    """
-    cur = conn.execute('''
-        SELECT r, g, b
-        FROM palettes
-        WHERE pokemon_id IN (?)
-    ''', (pokemon_ids))
-    return cur.fetchall()
-
 def get_spawns(conn: sqlite3.Connection, location_id: int, method_id: int) -> dict:
     cur = conn.execute("""
         SELECT spawns.pokemon_id, pokemon.name, spawns.level

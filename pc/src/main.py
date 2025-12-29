@@ -37,9 +37,9 @@ if __name__ == '__main__':
 
     threading.Thread(target=webserver.start_http_server, daemon=True).start()
     threading.Thread(target=webserver.run_ws_server, daemon=True).start()
-    # ser = serial.Serial('COM3', 9600, timeout=1)
-    # threading.Thread(target=serial_com.listener, args=(ser, incoming), daemon=True).start()
-    # threading.Thread(target=serial_com.writer, args=(ser, outgoing, write_lock), daemon=True).start()
+    ser = serial.Serial('COM3', 9600, timeout=1)
+    threading.Thread(target=serial_com.listener, args=(ser, incoming), daemon=True).start()
+    threading.Thread(target=serial_com.writer, args=(ser, outgoing, write_lock), daemon=True).start()
 
     cap = computer_vision.get_cap()
 
@@ -62,9 +62,15 @@ if __name__ == '__main__':
                     if not write_status:
                         logger.warning("Photo not saved")
 
-                    imgray, main_screen_rect, dialog_rect, nametag_rect = computer_vision.prepare_image(conn, im)
+                    res = computer_vision.prepare_image(im)
+                    if res is None:
+                        message = "Could not find Miyoo screen from webcam photo."
+                        logger.error(message)
+                        continue
+                    imgray, main_screen_rect, dialog_rect, nametag_rect = res
                     name = computer_vision.name_roi(imgray, dialog_rect)
-                    exp_names = {x["name"] for x in exp_spawns.values()}
+                    exp_names = [x["name"] for x in exp_spawns.values()]
+                    print(f'exp_names = {exp_names}')
                     if name not in exp_names:
                         message = f"Unexpected name: {name}"
                         logger.error(message)
@@ -76,7 +82,7 @@ if __name__ == '__main__':
 
                     # Note: encounter_ROI is slow on the first execution
                     # TODO: use the pokemon's sprite size and location to better select the encounter ROI
-                    distA, distB, delta = computer_vision.encounter_roi(conn, im, main_screen_rect, pokedex_id)
+                    distA, distB, delta = computer_vision.encounter_roi(im, main_screen_rect, pokedex_id)
                     is_shiny = distA > distB
                     if delta <= 2:
                         message = f"Weak palette delta: {delta:.1f}"

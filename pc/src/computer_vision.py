@@ -7,14 +7,124 @@ import sklearn.cluster
 
 # Local
 import Pokemon
-import database
+
+palettes = {
+    "92": [
+        (0xF8F8F8, 2438),
+        (0xF8F8F8, 60),
+        (0xD8D8D8, 27),
+        (0xD85038, 29),
+        (0xB02810, 27),
+        (0xF800F8, 0),
+        (0xB890B0, 0),
+        (0x886080, 32),
+        (0x704868, 60),
+        (0x503058, 166),
+        (0xD0A8C8, 581),
+        (0xB890B0, 421),
+        (0x886080, 209),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0x101010, 46),
+    ],
+    "-92": [
+        (0xF8F8F8, 2438),
+        (0xF8F8F8, 60),
+        (0xD8D8D8, 27),
+        (0xD85038, 29),
+        (0xB02810, 27),
+        (0xF800F8, 0),
+        (0xA880E0, 0),
+        (0x9070C0, 32),
+        (0x583890, 60),
+        (0x502860, 166),
+        (0x98D8F8, 581),
+        (0x70B0D0, 421),
+        (0x4888A8, 209),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0x101010, 46),
+    ],
+    "93": [
+        (0xD0D0B8, 2568),
+        (0xC090D8, 192),
+        (0x9068B0, 465),
+        (0x605080, 327),
+        (0x583870, 157),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0xD83030, 102),
+        (0xB01818, 22),
+        (0x601010, 23),
+        (0xD8D8D8, 16),
+        (0x707070, 1),
+        (0x101010, 197),
+        (0xF8F8F8, 26),
+    ],
+    "-93": [
+        (0xD0D0B8, 2568),
+        (0xD0A0D8, 192),
+        (0xC080C8, 465),
+        (0x8058A0, 327),
+        (0x503060, 157),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0x4898C0, 102),
+        (0x207098, 22),
+        (0x004068, 23),
+        (0xD0D0D0, 16),
+        (0x707070, 1),
+        (0x101010, 197),
+        (0xF8F8F8, 26),
+    ],
+    "104": [
+        (0x48C888, 3277),
+        (0xD8B868, 28),
+        (0xC09848, 64),
+        (0x906830, 110),
+        (0x503018, 37),
+        (0xE8E8E8, 113),
+        (0xC8C8B0, 105),
+        (0x888868, 25),
+        (0x585830, 43),
+        (0xF0E0C8, 29),
+        (0xF8D0A0, 53),
+        (0xE0B088, 25),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0x282828, 131),
+        (0xF8F8F8, 56),
+    ],
+    "-104": [
+        (0xD0D0B8, 3277),
+        (0xA8B070, 28),
+        (0x808048, 64),
+        (0x485018, 110),
+        (0x303800, 37),
+        (0xE0E0D0, 113),
+        (0xC0C0A8, 105),
+        (0x888868, 25),
+        (0x585830, 43),
+        (0xF8E8C0, 29),
+        (0xE8D090, 53),
+        (0xC8A058, 25),
+        (0xF800F8, 0),
+        (0xF800F8, 0),
+        (0x282828, 131),
+        (0xF8F8F8, 56),
+    ],
+}
 
 pytesseract.pytesseract.tesseract_cmd = r"C:/Program Files/Tesseract-OCR/tesseract.exe"
 resolution_x, resolution_y = 240, 160
 THRESHOLD_LOWER = 60
 NUM_DOMINANT_COLORS = 16
 
-def prepare_image(conn, im):
+def prepare_image(im):
     # TODO: deskew the image
     imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(imgray, THRESHOLD_LOWER, 255, cv2.THRESH_BINARY)
@@ -37,7 +147,7 @@ def prepare_image(conn, im):
 
     rects.sort(key=lambda x: x["area"], reverse=True)
 
-    # if len(rects < 4): return None
+    if len(rects < 4): return None
 
     main_screen_rect = rects[0]["rect"]
     dialog_rect = rects[2]["rect"]
@@ -53,16 +163,20 @@ def get_cap():
         raise RuntimeError('Cannot open webcam')
     return cap
 
-def imread(cap, filename):
-    return cv2.imread(filename)
-
 def read(cap):
     status, frame = cap.read()
     if not status:
         raise RuntimeError('Error reading webcam')
     return frame
 
-def encounter_roi(conn, im, rect, pokedex_id):
+def get_palette(pokedex_id: int):
+    res = [colour for colour, count in palettes[str(pokedex_id)][1:] if count >= 0]
+    # no duplicates
+    # no background colour
+    # no palette colours that are not used in the sprite (0 pixels reference it)
+    return list(set(res))
+
+def encounter_roi(im, rect, pokedex_id):
     x, y, w, h = rect
     # print('encounter', w, h)
     # scale_x, scale_y = w / 240, h / 112
@@ -76,9 +190,13 @@ def encounter_roi(conn, im, rect, pokedex_id):
     roi = im[yy:yy + hh, xx:xx + ww]
     roi = cv2.resize(roi, (64, 64), interpolation=cv2.INTER_NEAREST)
     roi = normalize_brightness(roi, 207)
-    
-    # TODO: does order matter? select * order by id ASC (insertion order since i insert in sorted order)
-    palA, palB = database.get_palettes(conn, [pokedex_id, -pokedex_id])
+
+    # TODO exclude background colour
+    # exclude any colours with 0 count
+    palA = get_palette(pokedex_id)
+    palB = get_palette(-pokedex_id)
+    print(palA)
+    print(palB)
     palP = dominant_colors(roi, NUM_DOMINANT_COLORS)
     palPx = [[r.item(), g.item(), b.item()] for b, g, r in palP]
 
