@@ -5,3 +5,4 @@ __pycache__
 *.class
 *.zip
 .env
+pc/img/pics
