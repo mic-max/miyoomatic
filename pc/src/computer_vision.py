@@ -145,9 +145,9 @@ def prepare_image(im):
                 "area": area
             })
 
-    rects.sort(key=lambda x: x["area"], reverse=True)
+    if len(rects) < 4: return None
 
-    if len(rects < 4): return None
+    rects.sort(key=lambda x: x["area"], reverse=True)
 
     main_screen_rect = rects[0]["rect"]
     dialog_rect = rects[2]["rect"]
