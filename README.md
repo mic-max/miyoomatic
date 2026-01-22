@@ -307,4 +307,10 @@ Dialog
 
 ## mGBA Emualtor
 1. `pip install pywin32 pydirectinput`
+1. Open mGBA with Fire red and your save file
+1. Load game and get to overworld.
+1. Open menu and have it hover Pokemon.
+1. Set frame size to 1x
+1. Emulation speed to 1x
+1. Mute the emulator for your own sanity
 1. `python src/pc/emulator.py`
