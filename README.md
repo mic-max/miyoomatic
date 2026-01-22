@@ -101,6 +101,7 @@ pointers are 24 bit?
 //   pokemon that is used in the encounter
 //    - has single character nickname
 //    - has a move that can sleep or freeze the gastly, near 100% catch rate with ultra ball.
+<!-- if the character is located in the overworld with a block to his right and down. then it wont be able to move. -->
 
 // Note: doesn't work on ghost since it's a normal move.
 //    - scyther with false swipe leaves opponent at 1HP, 100% catch rate with Great Ball
@@ -260,3 +261,50 @@ int buyAbra[7][2] = {
 
 
   #TODO read https://docs.python.org/3/library/queue.html implementation and how it works with threads
+
+
+## State Machine
+
+Overworld
+
+Menu > Pokedex
+Menu > Pokemon
+Menu > Bag
+Menu > Michael
+Menu > Save
+Menu > Option
+Menu > Exit
+
+Pokemon > #1
+Pokemon > #2
+Pokemon > #3
+Pokemon > #4
+Pokemon > #5
+Pokemon > #6
+Pokemon > Cancel
+
+Pokemon > #1 > Menu > Summary
+Pokemon > #1 > Menu > SWEET SCENT
+Pokemon > #1 > Menu > Switch
+Pokemon > #1 > Menu > Item
+Pokemon > #1 > Menu > Cancel
+
+Sweet Scent
+
+Pokemon Appeared > Gastly Regular
+Pokemon Appeared > Gastly Shiny
+Pokemon Appeared > Cubone Regular
+Pokemon Appeared > Cubone Shiny
+Pokemon Appeared > Haunter Regular
+Pokemon Appeared > Haunter Shiny
+
+Encounter > Fight
+Encounter > Bag
+Encounter > Pokemon
+Encounter > Run
+
+Dialog
+
+## mGBA Emualtor
+1. `pip install pywin32 pydirectinput`
+1. `python src/pc/emulator.py`
