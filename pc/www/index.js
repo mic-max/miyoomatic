@@ -46,10 +46,20 @@ const timer = document.getElementById("timer")
 const audioPlayer = document.getElementById("music");
 audioPlayer.volume = 0.05;
 
+// Pokemon.Gender enum values from pc/src/Pokemon.py: UNKNOWN=1, MALE=2, FEMALE=3.
+// addItem expects gender as: true=male, false=female, null=unknown.
+function genderFromValue(v) {
+    if (v === 2) return true;
+    if (v === 3) return false;
+    return null;
+}
+
 ws.onmessage = (event) => {
-    const li = document.createElement("li");
-    li.textContent = event.data;
-    chat.appendChild(li);
+    let msg;
+    try { msg = JSON.parse(event.data); } catch { return; }
+    if (msg.type === "encounter") {
+        addItem(msg.pokedex_id, msg.level ?? "?", genderFromValue(msg.gender), !!msg.is_shiny);
+    }
 };
 
 function sendMessage() {
@@ -200,7 +210,7 @@ function makeEmptySlot() {
     return slot;
 }
 
-function makeFilledSlot(pokedexId, number, gender) {
+function makeFilledSlot(pokedexId, number, gender, isShiny) {
     const slot = document.createElement("div");
     slot.className = "slot";
 
@@ -210,7 +220,8 @@ function makeFilledSlot(pokedexId, number, gender) {
     num.textContent = number;
 
     const img = document.createElement("img");
-    img.src = `img/pokemon/${String(pokedexId).padStart(3, "0")}.png`;
+    const prefix = isShiny ? "-" : "";
+    img.src = `img/pokemon/${prefix}${String(pokedexId).padStart(3, "0")}.png`;
 
     slot.appendChild(num);
     slot.appendChild(img);
@@ -221,15 +232,20 @@ function makeFilledSlot(pokedexId, number, gender) {
 for (let i = 0; i < maxSize; i++) queue.appendChild(makeEmptySlot());
 
 let sliding = false;
+const pending = [];
 
-function addItem(pokedexId, number, gender) {
-    if (sliding) return;  // ignore clicks mid-animation
+function addItem(pokedexId, number, gender, isShiny = false) {
+    pending.push([pokedexId, number, gender, isShiny]);
+    drainPending();
+}
+
+function drainPending() {
+    if (sliding || pending.length === 0) return;
+    const [pokedexId, number, gender, isShiny] = pending.shift();
     encounters++;
 
     // Append the new (11th) slot off the right edge of the visible area.
-    queue.appendChild(makeFilledSlot(pokedexId, number, gender));
-
-    // Force reflow so the browser commits the layout before the transition starts.
+    queue.appendChild(makeFilledSlot(pokedexId, number, gender, isShiny));
     void queue.offsetWidth;
 
     sliding = true;
@@ -240,6 +256,7 @@ function addItem(pokedexId, number, gender) {
         queue.classList.remove("sliding");
         queue.removeChild(queue.firstElementChild); // drop the oldest (leftmost) slot
         sliding = false;
+        drainPending();
     };
     queue.addEventListener("transitionend", onDone);
 }
