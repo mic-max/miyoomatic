@@ -1,5 +1,4 @@
 # Miyoo-matic
-Automating the button presses on a handheld console.
 Play a Miyoo handheld console automatically with solenoids and a webcam.
 
 ## Requirements
@@ -314,3 +313,8 @@ Dialog
 1. Emulation speed to 1x
 1. Mute the emulator for your own sanity
 1. `python src/pc/emulator.py`
+
+## Tests
+
+# TODO: Add test for is_menu_open, should return False for all templates except when the menu is open returns True
+# TODO: Add test for this, should return -1 for all templates except when the menu is open. Make the filename equal to the expected menu index returned by this function
