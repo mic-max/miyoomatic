@@ -20,6 +20,7 @@ Play a Miyoo handheld console automatically with solenoids and a webcam.
 1. `./venv/Scripts/Activate.ps1`
 1. `ruff check`
 1. `python pc/src/main.py`
+1. Open <http://localhost:8000> — the WebSocket is served on the same port at `/ws`.
 
 ## Arduino Setup
 1. `arduino-cli config init`

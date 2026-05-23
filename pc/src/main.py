@@ -35,8 +35,7 @@ if __name__ == '__main__':
     write_lock = threading.Lock()
     conn = database.connect()
 
-    threading.Thread(target=webserver.start_http_server, daemon=True).start()
-    threading.Thread(target=webserver.run_ws_server, daemon=True).start()
+    threading.Thread(target=webserver.run, daemon=True).start()
     ser = serial.Serial('COM3', 9600, timeout=1)
     threading.Thread(target=serial_com.listener, args=(ser, incoming), daemon=True).start()
     threading.Thread(target=serial_com.writer, args=(ser, outgoing, write_lock), daemon=True).start()

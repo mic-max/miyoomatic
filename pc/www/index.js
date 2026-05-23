@@ -4,7 +4,7 @@ const maxSize = 10;
 let encounters = 5142;
 gastly_total = Math.round(encounters * 0.9)
 
-const ws = new WebSocket("ws://localhost:8765");
+const ws = new WebSocket(`ws://${location.host}/ws`);
 const chat = document.getElementById("chat");
 const timer = document.getElementById("timer")
 
