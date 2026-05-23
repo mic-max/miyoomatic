@@ -5,6 +5,7 @@ import queue
 import serial
 import threading
 import time
+import uuid
 
 # PIP
 import dotenv
@@ -54,8 +55,7 @@ if __name__ == '__main__':
                 msg = incoming.get()
                 logger.info(f"Received: {msg}")
                 if msg == 's':
-                    encounter_id = int(time.time())
-                    # TODO: update to python 3.14 and use uuid.uuid7()
+                    encounter_id = uuid.uuid7()
                     im = computer_vision.read(cap)
                     write_status = computer_vision.write_image(f"pc/img/pics/{encounter_id}.jpg", im)
                     if not write_status:
