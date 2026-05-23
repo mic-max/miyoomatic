@@ -65,12 +65,30 @@ def press_key(hwnd, vk):
     win32gui.PostMessage(hwnd, win32con.WM_KEYUP, vk, 0)
 
 def press_f12_to_window(hwnd):
-    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-    win32gui.SetForegroundWindow(hwnd)
-    time.sleep(WAIT_FOR_FOCUS)
-    ctypes.windll.user32.keybd_event(SCREENSHOT, 0, 0, 0)
-    time.sleep(HOLD_KEY)
-    ctypes.windll.user32.keybd_event(SCREENSHOT, 0, 0x0002, 0)
+    # Deliver F12 straight to mGBA's message queue — no SetForegroundWindow, no focus theft.
+    press_key(hwnd, SCREENSHOT)
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TRIGGER_PATH = REPO_ROOT / "tmp" / "shot.trigger"
+SHOT_DIR = REPO_ROOT / "tmp"
+
+def request_screenshot(out_path: Path, timeout: float = 2.0, poll: float = 0.02) -> bool:
+    # Hand the destination path to the in-mGBA Lua script via an atomic trigger-file write,
+    # then wait for the PNG to land. Returns True on success.
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    TRIGGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if out_path.exists():
+        out_path.unlink()
+    tmp = TRIGGER_PATH.with_suffix(".trigger.tmp")
+    tmp.write_text(str(out_path).replace("\\", "/"))
+    tmp.replace(TRIGGER_PATH)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if out_path.exists() and not TRIGGER_PATH.exists():
+            return True
+        time.sleep(poll)
+    return False
 
 def capture(hwnd, output_dir: Path, filename: str):
     """

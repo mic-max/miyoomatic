@@ -1,0 +1,10 @@
+opencv-python==4.13.0.92
+numpy>=2.3
+scikit-image>=0.25
+scikit-learn>=1.5
+pytesseract==0.3.13
+pyserial==3.5
+httpx==0.28.1
+networkx==3.4.2
+pywin32==311
+pydirectinput==1.0.4

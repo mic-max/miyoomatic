@@ -54,7 +54,8 @@ body {
 }
 
 .queue-wrapper {
-    width: 640px;  /* 10 items × (55px each incl. margin) */
+    /* 10 visible slots of 64px + 5px gap = 690px, minus the leading gap = 685px */
+    width: 685px;
     height: 88px;
     overflow: hidden;
     background: var(--offwhite);
@@ -65,18 +66,28 @@ body {
 
 .queue {
     display: flex;
-    justify-content: flex-end; /* align items to the right */
-    position: relative;
+    gap: 5px;
+    /* Track holds 10 visible slots (and momentarily an 11th during a slide). */
 }
 
-.item {
+.queue.sliding {
+    transform: translateX(-69px); /* slot width 64px + gap 5px */
+    transition: transform 0.5s ease;
+}
+
+.slot {
     width: 64px;
+    height: 80px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-left: 5px;
-    transition: transform 0.5s ease;
+    justify-content: center;
+}
+
+.slot.empty {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
 }
 
 .pokemon {

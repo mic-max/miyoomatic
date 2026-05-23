@@ -4,6 +4,41 @@ const maxSize = 10;
 let encounters = 5142;
 gastly_total = Math.round(encounters * 0.9)
 
+// TODO: drive these from the location dropdown.
+const LOCATION_ID = 99;
+const METHOD_ID = 0;
+
+let spawnTable = null;  // [{pokedex_id, level, odds}, ...] flattened from /spawns
+
+async function loadSpawns() {
+    const res = await fetch(`/spawns/${LOCATION_ID}/${METHOD_ID}`);
+    if (!res.ok) throw new Error(`Spawns fetch failed: ${res.status}`);
+    const data = await res.json();
+    const flat = [];
+    for (const [pid, p] of Object.entries(data)) {
+        for (const row of p.levels) {
+            flat.push({pokedex_id: parseInt(pid, 10), level: row.level, odds: row.odds});
+        }
+    }
+    return flat;
+}
+
+function weightedPick(rows) {
+    const total = rows.reduce((s, r) => s + r.odds, 0);
+    let r = Math.random() * total;
+    for (const row of rows) {
+        r -= row.odds;
+        if (r <= 0) return row;
+    }
+    return rows[rows.length - 1];
+}
+
+async function randomEncounter() {
+    if (spawnTable === null) spawnTable = await loadSpawns();
+    const pick = weightedPick(spawnTable);
+    addItem(pick.pokedex_id, pick.level, Math.random() > 0.5);
+}
+
 const ws = new WebSocket(`ws://${location.host}/ws`);
 const chat = document.getElementById("chat");
 const timer = document.getElementById("timer")
@@ -65,6 +100,7 @@ var x = setInterval(function() {
 fillTable([
     // Pokemon Tower 3F
     {
+        pokedex_id: 92,
         name: "Gastly",
         types: ["ghost", "poison"],
         levels: [
@@ -78,6 +114,7 @@ fillTable([
         ]
     },
     {
+        pokedex_id: 104,
         name: "Cubone",
         types: ["ground"],
         levels: [
@@ -87,6 +124,7 @@ fillTable([
         ]
     },
     {
+        pokedex_id: 93,
         name: "Haunter",
         types: ["ghost", "poison"],
         levels: [
@@ -107,7 +145,7 @@ function fillTable(pokemons) {
         td.appendChild(div);
         const img = document.createElement("img");
         img.className = "sprite";
-        img.src = `img/pokemon/${pokemon.name.toLowerCase()}.png`;
+        img.src = `img/pokemon/${String(pokemon.pokedex_id).padStart(3, "0")}.png`;
         const p = document.createElement("p");
         p.innerText = pokemon.name
         div.appendChild(img)
@@ -156,39 +194,52 @@ function fillTable(pokemons) {
     }
 }
 
-function addItem(imgUrl, number, gender) {
-    encounters++;
-    const div = document.createElement("div");
-    div.className = "item";
+function makeEmptySlot() {
+    const slot = document.createElement("div");
+    slot.className = "slot empty";
+    return slot;
+}
+
+function makeFilledSlot(pokedexId, number, gender) {
+    const slot = document.createElement("div");
+    slot.className = "slot";
 
     const num = document.createElement("div");
     num.className = "number";
-    if (gender !== null) {
-        num.classList.add(gender ? "male" : "female");
-    }
+    if (gender !== null) num.classList.add(gender ? "male" : "female");
     num.textContent = number;
 
     const img = document.createElement("img");
-    img.src = imgUrl;
+    img.src = `img/pokemon/${String(pokedexId).padStart(3, "0")}.png`;
 
-    div.appendChild(num);
-    div.appendChild(img);
-    queue.appendChild(div);
+    slot.appendChild(num);
+    slot.appendChild(img);
+    return slot;
+}
 
-    // Force reflow so transition works
-    void div.offsetWidth;
+// Start with maxSize empty slots, never below.
+for (let i = 0; i < maxSize; i++) queue.appendChild(makeEmptySlot());
 
-    // Slide all items left
-    const items = queue.querySelectorAll(".item");
-    items.forEach(item => {
-      item.style.transform = `translateX(-65px)`; // item width + margin
-    });
+let sliding = false;
 
-    // After animation, reset positions and remove overflow
-    setTimeout(() => {
-      items.forEach(item => item.style.transform = "");
-      if (items.length > maxSize) {
-        queue.removeChild(items[0]); // remove oldest
-      }
-    }, 500); // match transition duration
-  }
+function addItem(pokedexId, number, gender) {
+    if (sliding) return;  // ignore clicks mid-animation
+    encounters++;
+
+    // Append the new (11th) slot off the right edge of the visible area.
+    queue.appendChild(makeFilledSlot(pokedexId, number, gender));
+
+    // Force reflow so the browser commits the layout before the transition starts.
+    void queue.offsetWidth;
+
+    sliding = true;
+    queue.classList.add("sliding");
+
+    const onDone = () => {
+        queue.removeEventListener("transitionend", onDone);
+        queue.classList.remove("sliding");
+        queue.removeChild(queue.firstElementChild); // drop the oldest (leftmost) slot
+        sliding = false;
+    };
+    queue.addEventListener("transitionend", onDone);
+}

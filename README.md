@@ -14,13 +14,20 @@ Play a Miyoo handheld console automatically with solenoids and a webcam.
 1. `sqlite3 -init pc/setup.sql miyoomatic.db .quit`
 1. `python -m venv myenv`
 1. `./venv/Scripts/Activate.ps1`
-1. `pip install -r pc/src/requirements.txt`
+1. `pip install -r pc/src/requirements-api.txt -r pc/src/requirements-controller.txt`
+   - Or, if you're only running one of the two processes on this machine, install just that file.
 
 ## Subsequent Setup
+The app runs as two processes — start each in its own terminal.
+
 1. `./venv/Scripts/Activate.ps1`
 1. `ruff check`
-1. `python pc/src/main.py`
-1. Open <http://localhost:8000> — the WebSocket is served on the same port at `/ws`.
+1. **API** (HTTP + WS + static): `python pc/src/api.py` — serves <http://localhost:8001>, WebSocket at `/ws`.
+1. **Controller** — pick a backend:
+   - Real console: `python pc/src/main.py --backend arduino`
+   - mGBA on this desktop: `python pc/src/main.py --backend emulator`
+
+Override the controller's API target with `MIYOOMATIC_API=http://host:port`.
 
 ## Arduino Setup
 1. `arduino-cli config init`
@@ -319,3 +326,7 @@ Dialog
 
 # TODO: Add test for is_menu_open, should return False for all templates except when the menu is open returns True
 # TODO: Add test for this, should return -1 for all templates except when the menu is open. Make the filename equal to the expected menu index returned by this function
+
+<!--TODO: add telemetry-->
+
+NOTE: screenshots from mGBA are not compressed PNGs, PNGGauntlet reduces their size by a third to around 6kB.
