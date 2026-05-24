@@ -151,3 +151,58 @@ td {
 td.flash {
     animation: cellFlash 0.5s ease-out;
 }
+
+.shinies-wrapper {
+    margin-top: 16px;
+    padding: 8px 12px 12px;
+    width: 685px;
+    background: var(--offwhite);
+    border: 8px solid transparent;
+    border-image: url("img/borders/yellow.png") 8 space;
+    border-radius: 12px;
+}
+
+.shinies-wrapper h3 {
+    margin-bottom: 6px;
+    color: darkslategrey;
+}
+
+.shinies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.empty-shinies {
+    color: #888;
+    font-style: italic;
+}
+
+.shiny-card {
+    width: 96px;
+    padding: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: rgba(255, 235, 100, 0.25);
+    border-radius: 6px;
+    font-size: 9pt;
+    color: darkslategrey;
+}
+
+.shiny-card img {
+    width: 64px;
+    height: 64px;
+}
+
+.shiny-card .num {
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.shiny-card .ts {
+    font-size: 8pt;
+    color: #666;
+    margin-top: 2px;
+}

@@ -1,0 +1,17 @@
+# Heavy / irrelevant dirs that should never enter the image even if COPY pc/ is enabled.
+.git
+.ruff_cache
+__pycache__
+**/__pycache__
+venv
+tmp
+pc/img/pics
+schematic
+Serial
+img
+tools
+README.md
+*.gba
+*.zip
+.env
+miyoomatic.db

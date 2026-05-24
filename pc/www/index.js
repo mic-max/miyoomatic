@@ -25,7 +25,12 @@ async function setLocation(loc, method) {
     currentLoc = loc;
     currentMethod = method;
     await loadSpawnsFor(loc, method);
+    renderAll();
+}
+
+function renderAll() {
     renderTable();
+    renderShinies();
 }
 
 const STORAGE_KEY = "miyoomatic:stats";
@@ -66,6 +71,7 @@ function recordEncounter(loc, method, pokedexId, level, gender, isShiny, encount
             gender: gender === true ? "m" : gender === false ? "f" : "u",
             encounter_id: encounterId ?? null,
             timestamp: Date.now(),
+            encounter_number: totalAtLocation(stats),  // post-increment, so this == the ordinal
         });
     }
     setLocStats(loc, method, stats);
@@ -146,7 +152,7 @@ function clearEncounterRun() {
         return;
     }
     clearLocation(currentLoc, currentMethod);
-    renderTable();
+    renderAll();
     // TODO: snapshot the cleared run to a history table before deleting.
 }
 
@@ -225,6 +231,51 @@ function renderTable() {
     }
 }
 
+function makeShinyCard(shiny) {
+    const card = document.createElement("div");
+    card.className = "shiny-card";
+
+    const img = document.createElement("img");
+    img.src = `img/pokemon/-${String(shiny.pokedex_id).padStart(3, "0")}.png`;
+    card.appendChild(img);
+
+    const num = document.createElement("div");
+    num.className = "num";
+    num.textContent = `#${shiny.encounter_number ?? "?"}`;
+    card.appendChild(num);
+
+    const lvl = document.createElement("div");
+    const genderSym = shiny.gender === "m" ? "♂" : shiny.gender === "f" ? "♀" : "⚥";
+    const genderClass = shiny.gender === "m" ? "male" : shiny.gender === "f" ? "female" : "";
+    lvl.innerHTML = `Lv${shiny.level} <span class="${genderClass}">${genderSym}</span>`;
+    card.appendChild(lvl);
+
+    const ts = document.createElement("div");
+    ts.className = "ts";
+    ts.textContent = new Date(shiny.timestamp).toLocaleString();
+    card.appendChild(ts);
+
+    return card;
+}
+
+function renderShinies() {
+    const stats = getLocStats(currentLoc, currentMethod);
+    const container = document.getElementById("shinies");
+    container.innerHTML = "";
+    const shinies = stats.shinies || [];
+    if (shinies.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty-shinies";
+        empty.textContent = "No shinies yet.";
+        container.appendChild(empty);
+        return;
+    }
+    // Newest first.
+    for (const s of [...shinies].reverse()) {
+        container.appendChild(makeShinyCard(s));
+    }
+}
+
 setLocation(currentLoc, currentMethod);
 
 function makeEmptySlot() {
@@ -267,7 +318,7 @@ function drainPending() {
     const [pokedexId, level, gender, isShiny] = pending.shift();
 
     // recordEncounter was already called from ws.onmessage so localStorage is up to date.
-    renderTable();
+    renderAll();
 
     const genderKey = gender === true ? "m" : gender === false ? "f" : null;
     if (genderKey) {

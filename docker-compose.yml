@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    image: miyoomatic-api
+    container_name: miyoomatic-api
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      # Source + static. Bind-mounted so edits trigger uvicorn --reload from the host.
+      - ./pc:/app/pc
+      # SQLite file lives at repo root; mount it in so the DB persists across rebuilds.
+      - ./miyoomatic.db:/app/miyoomatic.db
+    command: ["python", "pc/src/api.py", "--reload"]
+    restart: unless-stopped
