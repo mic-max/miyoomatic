@@ -2,6 +2,7 @@
   --male: #778de6;
   --female: #e77e66;
   --offwhite: #f8f8f8;
+  --queue-slide-duration: 150ms;
 }
 
 * {
@@ -72,7 +73,7 @@ body {
 
 .queue.sliding {
     transform: translateX(-69px); /* slot width 64px + gap 5px */
-    transition: transform 0.5s ease;
+    transition: transform var(--queue-slide-duration) ease;
 }
 
 .slot {
@@ -139,5 +140,14 @@ th {
 }
 
 td {
-  text-align: end; 
+  text-align: end;
+}
+
+@keyframes cellFlash {
+    0%   { background-color: rgba(255, 235, 100, 0.85); }
+    100% { background-color: transparent; }
+}
+
+td.flash {
+    animation: cellFlash 0.5s ease-out;
 }

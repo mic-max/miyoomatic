@@ -95,9 +95,8 @@ if __name__ == "__main__":
                     is_shiny = user_input.confirm_shiny_result()
 
                 if is_shiny:
-                    message = f"Shiny Detected: {name}"
-                    logger.critical(message)
-                    api_client.send_notification(message)
+                    # API will fire the Pushover notification when it persists the encounter.
+                    logger.critical(f"Shiny Detected: {name}")
                 else:
                     controller.send("r")
 

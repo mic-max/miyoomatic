@@ -1,14 +1,23 @@
 # Python
-import http
-import urllib
+import http.client
+import urllib.parse
 
-def send_push(pushover_token: str, message: str):
-    # TODO: get this working, make app online
-    conn = http.client.HTTPSConnection('api.pushover.net:443')
-    conn.request('POST', '/1/messages.json',
-    urllib.parse.urlencode({
-        'token': 'abc123',
-        'user': pushover_token,
+
+def send_push(api_token: str, user_token: str, message: str,
+              title: str | None = None, priority: int = 0) -> None:
+    payload = {
+        'token': api_token,
+        'user': user_token,
         'message': message,
-    }), { 'Content-type': 'application/x-www-form-urlencoded' })
-    conn.getresponse()
+        'priority': priority,
+    }
+    if title:
+        payload['title'] = title
+    conn = http.client.HTTPSConnection('api.pushover.net:443')
+    conn.request(
+        'POST', '/1/messages.json',
+        urllib.parse.urlencode(payload),
+        {'Content-type': 'application/x-www-form-urlencoded'},
+    )
+    conn.getresponse().read()
+    conn.close()
