@@ -330,3 +330,5 @@ Dialog
 <!--TODO: add telemetry-->
 
 NOTE: screenshots from mGBA are not compressed PNGs, PNGGauntlet reduces their size by a third to around 6kB.
+
+- Track how long between encounters.
