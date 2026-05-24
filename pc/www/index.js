@@ -3,20 +3,30 @@ const tbody = document.getElementById("encounter-tbody");
 const encounterCountEl = document.getElementById("encounter-count");
 const maxSize = 10;
 
-// TODO: drive these from the location dropdown.
-const LOCATION_ID = 99;
-const METHOD_ID = 0;
+// Mutable so the dropdown can change which location we're viewing.
+// TODO: populate the dropdown from a locations API and wire its onchange to setLocation().
+let currentLoc = 99;
+let currentMethod = 0;
 
-// Per-location/method roster: which pokemon/levels are possible here. Counts/odds are
-// derived live from localStorage; this only carries metadata not in the DB (types).
-// TODO: pull pokedex_id + levels from /spawns, drop the duplication here.
-const LOCATION_ROSTERS = {
-    "99-0": [
-        {pokedex_id: 92,  name: "Gastly",  types: ["ghost", "poison"], levels: [13, 14, 15, 16, 17, 18, 19]},
-        {pokedex_id: 104, name: "Cubone",  types: ["ground"],          levels: [15, 17]},
-        {pokedex_id: 93,  name: "Haunter", types: ["ghost", "poison"], levels: [25]},
-    ],
-};
+// Cache /spawns responses by "loc-method". Each entry is the API payload:
+// { "<pokedex_id>": { name, levels: [{level, odds}], genders } }
+const spawnsCache = {};
+
+async function loadSpawnsFor(loc, method) {
+    const key = `${loc}-${method}`;
+    if (spawnsCache[key]) return spawnsCache[key];
+    const res = await fetch(`/spawns/${loc}/${method}`);
+    if (!res.ok) throw new Error(`Spawns fetch failed: ${res.status}`);
+    spawnsCache[key] = await res.json();
+    return spawnsCache[key];
+}
+
+async function setLocation(loc, method) {
+    currentLoc = loc;
+    currentMethod = method;
+    await loadSpawnsFor(loc, method);
+    renderTable();
+}
 
 const STORAGE_KEY = "miyoomatic:stats";
 
@@ -79,11 +89,9 @@ function countsFor(stats, pokedexId, level) {
 
 async function randomEncounter() {
     // Server picks weighted-randomly and broadcasts via WS; we receive it in ws.onmessage.
-    const res = await fetch(`/encounters/random/${LOCATION_ID}/${METHOD_ID}`, {method: "POST"});
+    const res = await fetch(`/encounters/random/${currentLoc}/${currentMethod}`, {method: "POST"});
     if (!res.ok) console.error(`random encounter failed: ${res.status}`);
 }
-
-const timer = document.getElementById("timer");
 
 const audioPlayer = document.getElementById("music");
 audioPlayer.volume = 0.05;
@@ -115,7 +123,13 @@ function connectWS() {
             return;
         }
         if (msg.type === "encounter") {
-            addItem(msg.pokedex_id, msg.level, genderFromValue(msg.gender), !!msg.is_shiny, msg.encounter_id);
+            // Always persist the count to the encounter's own location, but only animate the
+            // queue if the user is currently viewing that location.
+            recordEncounter(msg.location_id, msg.method_id, msg.pokedex_id, msg.level,
+                            genderFromValue(msg.gender), !!msg.is_shiny, msg.encounter_id);
+            if (msg.location_id === currentLoc && msg.method_id === currentMethod) {
+                addItem(msg.pokedex_id, msg.level, genderFromValue(msg.gender), !!msg.is_shiny);
+            }
         }
     };
     ws.onclose = () => {
@@ -126,43 +140,15 @@ function connectWS() {
 connectWS();
 
 function clearEncounterRun() {
-    const stats = getLocStats(LOCATION_ID, METHOD_ID);
+    const stats = getLocStats(currentLoc, currentMethod);
     if (totalAtLocation(stats) === 0) {
         console.log("Nothing to clear.");
         return;
     }
-    clearLocation(LOCATION_ID, METHOD_ID);
-    countDownDate = new Date().getTime();
+    clearLocation(currentLoc, currentMethod);
     renderTable();
     // TODO: snapshot the cleared run to a history table before deleting.
 }
-
- var countDownDate = new Date("Feb 2, 1997 15:37:25").getTime();
-
-// Update the count down every 1 second
-var x = setInterval(function() {
-    // Get today's date and time
-    var now = new Date().getTime();
-
-    // Find the distance between now and the count down date
-    var distance = now - countDownDate;
-
-    // Time calculations for days, hours, minutes and seconds
-    var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-    let timerString = "";
-    if (days > 0) {
-        timerString += `${days}d `;
-    }
-    if (days > 0 || hours > 0) {
-        timerString += `${hours}h `;
-    }
-    timerString += `${minutes}m ${seconds}s `;
-    timer.innerHTML = timerString;
-}, 1000);
 
 function pctText(part, whole) {
     if (whole === 0) return "0.00%";
@@ -170,16 +156,21 @@ function pctText(part, whole) {
 }
 
 function renderTable() {
-    const stats = getLocStats(LOCATION_ID, METHOD_ID);
+    const stats = getLocStats(currentLoc, currentMethod);
     const total = totalAtLocation(stats);
     encounterCountEl.textContent = total;
     tbody.innerHTML = "";
 
-    const roster = LOCATION_ROSTERS[locKey(LOCATION_ID, METHOD_ID)] || [];
-    for (const pokemon of roster) {
+    const spawns = spawnsCache[locKey(currentLoc, currentMethod)];
+    if (!spawns) return;  // first paint before /spawns has loaded — setLocation will re-render.
+
+    for (const [pidStr, pokemon] of Object.entries(spawns)) {
+        const pokedexId = parseInt(pidStr, 10);
+        const levels = pokemon.levels.map(r => r.level);
+
         const tr = document.createElement("tr");
         const td = document.createElement("td");
-        const rowspan = pokemon.levels.length == 1 ? 2 : pokemon.levels.length + 2;
+        const rowspan = levels.length == 1 ? 2 : levels.length + 2;
         td.setAttribute("rowspan", rowspan);
         tr.appendChild(td);
 
@@ -188,24 +179,17 @@ function renderTable() {
         td.appendChild(div);
         const sprite = document.createElement("img");
         sprite.className = "sprite";
-        sprite.src = `img/pokemon/${String(pokemon.pokedex_id).padStart(3, "0")}.png`;
+        sprite.src = `img/pokemon/${String(pokedexId).padStart(3, "0")}.png`;
         const name = document.createElement("p");
         name.innerText = pokemon.name;
         div.appendChild(sprite);
         div.appendChild(name);
-        const typesDiv = document.createElement("div");
-        typesDiv.className = "types";
-        div.appendChild(typesDiv);
-        for (const type of pokemon.types) {
-            const t = document.createElement("img");
-            t.src = `img/types/${type}.png`;
-            typesDiv.appendChild(t);
-        }
+        // TODO: render type icons once a pokemon-info API exposes them.
         tbody.appendChild(tr);
 
         let totalM = 0, totalF = 0, totalU = 0;
-        for (const level of pokemon.levels) {
-            const c = countsFor(stats, pokemon.pokedex_id, level);
+        for (const level of levels) {
+            const c = countsFor(stats, pokedexId, level);
             totalM += c.m; totalF += c.f; totalU += c.u;
             const rowSum = c.m + c.f + c.u;
 
@@ -214,17 +198,17 @@ function renderTable() {
             tdLevel.innerText = level;
             const tdMales = document.createElement("td");
             tdMales.innerText = c.m;
-            tdMales.dataset.cell = `${pokemon.pokedex_id}-${level}-m`;
+            tdMales.dataset.cell = `${pokedexId}-${level}-m`;
             const tdFemales = document.createElement("td");
             tdFemales.innerText = c.f;
-            tdFemales.dataset.cell = `${pokemon.pokedex_id}-${level}-f`;
+            tdFemales.dataset.cell = `${pokedexId}-${level}-f`;
             const tdOdds = document.createElement("td");
             tdOdds.innerText = pctText(rowSum, total);
             lvlTr.append(tdLevel, tdMales, tdFemales, tdOdds);
             tbody.appendChild(lvlTr);
         }
 
-        if (pokemon.levels.length > 1) {
+        if (levels.length > 1) {
             const sumRow = totalM + totalF + totalU;
             const trTotal = document.createElement("tr");
             const tdTotal = document.createElement("td");
@@ -241,7 +225,7 @@ function renderTable() {
     }
 }
 
-renderTable();
+setLocation(currentLoc, currentMethod);
 
 function makeEmptySlot() {
     const slot = document.createElement("div");
@@ -273,16 +257,16 @@ for (let i = 0; i < maxSize; i++) queue.appendChild(makeEmptySlot());
 let sliding = false;
 const pending = [];
 
-function addItem(pokedexId, level, gender, isShiny = false, encounterId = null) {
-    pending.push([pokedexId, level, gender, isShiny, encounterId]);
+function addItem(pokedexId, level, gender, isShiny = false) {
+    pending.push([pokedexId, level, gender, isShiny]);
     drainPending();
 }
 
 function drainPending() {
     if (sliding || pending.length === 0) return;
-    const [pokedexId, level, gender, isShiny, encounterId] = pending.shift();
+    const [pokedexId, level, gender, isShiny] = pending.shift();
 
-    recordEncounter(LOCATION_ID, METHOD_ID, pokedexId, level, gender, isShiny, encounterId);
+    // recordEncounter was already called from ws.onmessage so localStorage is up to date.
     renderTable();
 
     const genderKey = gender === true ? "m" : gender === false ? "f" : null;

@@ -12,10 +12,6 @@ def record_encounter(conn: sqlite3.Connection, enc: dict) -> None:
     # Until then this is a stub so the rest of the API works end-to-end.
     _ = (conn, enc)
 
-def get_all_messages(conn: sqlite3.Connection) -> any:
-    cur = conn.execute('SELECT id, content FROM messages ORDER BY id ASC')
-    return cur.fetchall()
-
 def get_id_from_name(conn: sqlite3.Connection, name: str) -> int | None:
     cur = conn.execute('SELECT id FROM pokemon WHERE name = ?', (name,))
     row = cur.fetchone()
