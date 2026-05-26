@@ -8,14 +8,14 @@ _client = httpx.Client(base_url=BASE_URL, timeout=5.0)
 
 
 def get_spawns(location_id: int, method_id: int) -> dict:
-    r = _client.get(f"/spawns/{location_id}/{method_id}")
+    r = _client.get(f"/api/spawns/{location_id}/{method_id}")
     r.raise_for_status()
     # JSON keys come back as strings — restore int keys to match the old database.get_spawns contract.
     return {int(k): v for k, v in r.json().items()}
 
 
 def get_id_from_name(name: str) -> int | None:
-    r = _client.get("/pokemon", params={"name": name})
+    r = _client.get("/api/pokemon", params={"name": name})
     if r.status_code == 404:
         return None
     r.raise_for_status()
@@ -23,7 +23,7 @@ def get_id_from_name(name: str) -> int | None:
 
 
 def send_notification(message: str) -> None:
-    r = _client.post("/notifications", json={"message": message})
+    r = _client.post("/api/notifications", json={"message": message})
     r.raise_for_status()
 
 
@@ -38,5 +38,5 @@ def record_encounter(encounter_id, pokemon, location_id: int, method_id: int) ->
         "location_id": location_id,
         "method_id": method_id,
     }
-    r = _client.post("/encounters", json=payload)
+    r = _client.post("/api/encounters", json=payload)
     r.raise_for_status()

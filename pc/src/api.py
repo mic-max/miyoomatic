@@ -12,7 +12,7 @@ import dotenv
 import notify
 import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 dotenv.load_dotenv()
@@ -20,10 +20,10 @@ dotenv.load_dotenv()
 logger = logging.getLogger(__name__)
 
 PC_DIR = Path(__file__).resolve().parent.parent
-WWW_DIR = PC_DIR / "www"
-IMG_DIR = PC_DIR / "img"
-AUDIO_DIR = PC_DIR / "audio"
-FONTS_DIR = PC_DIR / "fonts"
+
+# Origins permitted to call this API. The page is served from a separate nginx origin so
+# CORS is required. Comma-separated, e.g. "http://localhost:8080,http://192.168.1.5:8080".
+CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:8080").split(",") if o.strip()]
 
 
 class ConnectionManager:
@@ -76,6 +76,12 @@ class EncounterIn(BaseModel):
 
 def build_app() -> FastAPI:
     app = FastAPI(title="miyoomatic API")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=CORS_ORIGINS,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     conn = database.connect()
     pushover_user = os.getenv("PUSHOVER_USER_TOKEN")
     pushover_app = os.getenv("PUSHOVER_API_TOKEN")
@@ -83,7 +89,7 @@ def build_app() -> FastAPI:
     def pushover_ready() -> bool:
         return bool(pushover_user and pushover_app)
 
-    @app.post("/notifications", status_code=202)
+    @app.post("/api/notifications", status_code=202)
     def post_notification(n: NotificationIn):
         if not pushover_ready():
             raise HTTPException(
@@ -93,11 +99,11 @@ def build_app() -> FastAPI:
         notify.send_push(pushover_app, pushover_user, n.message)
         return {"ok": True}
 
-    @app.get("/spawns/{location_id}/{method_id}")
+    @app.get("/api/spawns/{location_id}/{method_id}")
     def get_spawns(location_id: int, method_id: int):
         return database.get_spawns(conn, location_id, method_id)
 
-    @app.get("/pokemon")
+    @app.get("/api/pokemon")
     def get_pokemon(name: str):
         pid = database.get_id_from_name(conn, name)
         if pid is None:
@@ -107,6 +113,7 @@ def build_app() -> FastAPI:
     async def _persist_encounter(enc: EncounterIn) -> dict:
         database.record_encounter(conn, enc.model_dump())
         await manager.broadcast_json({"type": "encounter", **enc.model_dump()})
+        # TODO: if pushover is not ready the app shouldn't even start...
         if enc.is_shiny and pushover_ready():
             lvl = f"Lv{enc.level} " if enc.level is not None else ""
             notify.send_push(
@@ -117,11 +124,11 @@ def build_app() -> FastAPI:
             )
         return {"ok": True, "encounter_id": enc.encounter_id}
 
-    @app.post("/encounters", status_code=201)
+    @app.post("/api/encounters", status_code=201)
     async def post_encounter(enc: EncounterIn):
         return await _persist_encounter(enc)
 
-    @app.post("/encounters/random/{location_id}/{method_id}", status_code=201)
+    @app.post("/api/encounters/random/{location_id}/{method_id}", status_code=201)
     async def post_random_encounter(
         location_id: int, method_id: int, shiny_odds: int = 8192
     ):
@@ -168,7 +175,7 @@ def build_app() -> FastAPI:
         )
         return await _persist_encounter(enc)
 
-    @app.websocket("/ws")
+    @app.websocket("/api/ws")
     async def websocket_endpoint(ws: WebSocket):
         await manager.connect(ws)
         try:
@@ -178,11 +185,6 @@ def build_app() -> FastAPI:
         except WebSocketDisconnect:
             await manager.disconnect(ws)
 
-    # More-specific mounts first; the root html mount must be last (catch-all).
-    app.mount("/img", StaticFiles(directory=IMG_DIR), name="img")
-    app.mount("/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
-    app.mount("/fonts", StaticFiles(directory=FONTS_DIR), name="fonts")
-    app.mount("/", StaticFiles(directory=WWW_DIR, html=True), name="static")
     return app
 
 
@@ -210,8 +212,8 @@ if __name__ == "__main__":
             port=8001,
             timeout_graceful_shutdown=2,
             reload=True,
-            reload_dirs=[str(PC_DIR / "src"), str(PC_DIR / "www")],
-            reload_includes=["*.py", "*.html", "*.js", "*.css"],
+            reload_dirs=[str(PC_DIR / "src")],
+            reload_includes=["*.py"],
         )
     else:
         uvicorn.run(app, host="0.0.0.0", port=8001, timeout_graceful_shutdown=2)

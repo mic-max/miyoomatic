@@ -3,6 +3,11 @@ const tbody = document.getElementById("encounter-tbody");
 const encounterCountEl = document.getElementById("encounter-count");
 const maxSize = 10;
 
+// Page is served from nginx; API lives on a different port. Same hostname so this works
+// over LAN too (the API container exposes 8001 on the host).
+const API_BASE = `${location.protocol}//${location.hostname}:8001/api`;
+const WS_URL = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.hostname}:8001/api/ws`;
+
 // Mutable so the dropdown can change which location we're viewing.
 // TODO: populate the dropdown from a locations API and wire its onchange to setLocation().
 let currentLoc = 99;
@@ -15,7 +20,7 @@ const spawnsCache = {};
 async function loadSpawnsFor(loc, method) {
     const key = `${loc}-${method}`;
     if (spawnsCache[key]) return spawnsCache[key];
-    const res = await fetch(`/spawns/${loc}/${method}`);
+    const res = await fetch(`${API_BASE}/spawns/${loc}/${method}`);
     if (!res.ok) throw new Error(`Spawns fetch failed: ${res.status}`);
     spawnsCache[key] = await res.json();
     return spawnsCache[key];
@@ -26,6 +31,7 @@ async function setLocation(loc, method) {
     currentMethod = method;
     await loadSpawnsFor(loc, method);
     renderAll();
+    renderQueueSlots();
 }
 
 function renderAll() {
@@ -47,7 +53,11 @@ function saveAllStats(s) {
 function locKey(loc, method) { return `${loc}-${method}`; }
 
 function getLocStats(loc, method) {
-    return loadAllStats()[locKey(loc, method)] || {counts: {}, shinies: []};
+    const s = loadAllStats()[locKey(loc, method)] || {};
+    if (!s.counts) s.counts = {};
+    if (!s.shinies) s.shinies = [];
+    if (!s.queue) s.queue = [];
+    return s;
 }
 
 function setLocStats(loc, method, stats) {
@@ -64,6 +74,9 @@ function recordEncounter(loc, method, pokedexId, level, gender, isShiny, encount
     if (gender === true) slot.m++;
     else if (gender === false) slot.f++;
     else slot.u++;
+    // Mirror what's visible in the queue (newest last). Cap to maxSize so the array stays small.
+    stats.queue.push({pokedex_id: pokedexId, level, gender, isShiny});
+    if (stats.queue.length > maxSize) stats.queue.shift();
     if (isShiny) {
         stats.shinies.push({
             pokedex_id: pokedexId,
@@ -95,7 +108,7 @@ function countsFor(stats, pokedexId, level) {
 
 async function randomEncounter() {
     // Server picks weighted-randomly and broadcasts via WS; we receive it in ws.onmessage.
-    const res = await fetch(`/encounters/random/${currentLoc}/${currentMethod}`, {method: "POST"});
+    const res = await fetch(`${API_BASE}/encounters/random/${currentLoc}/${currentMethod}`, {method: "POST"});
     if (!res.ok) console.error(`random encounter failed: ${res.status}`);
 }
 
@@ -115,7 +128,7 @@ let sessionId = null;
 let reconnectDelay = 500;
 
 function connectWS() {
-    ws = new WebSocket(`ws://${location.host}/ws`);
+    ws = new WebSocket(WS_URL);
     ws.onopen = () => { reconnectDelay = 500; };
     ws.onmessage = (event) => {
         let msg;
@@ -153,6 +166,7 @@ function clearEncounterRun() {
     }
     clearLocation(currentLoc, currentMethod);
     renderAll();
+    renderQueueSlots();
     // TODO: snapshot the cleared run to a history table before deleting.
 }
 
@@ -302,8 +316,18 @@ function makeFilledSlot(pokedexId, number, gender, isShiny) {
     return slot;
 }
 
-// Start with maxSize empty slots, never below.
-for (let i = 0; i < maxSize; i++) queue.appendChild(makeEmptySlot());
+function renderQueueSlots() {
+    // Rebuild the queue DOM from the persisted queue for the current location.
+    // Only called from setLocation / clearEncounterRun — drainPending manages the DOM
+    // directly during its slide animation so we don't fight with it mid-transition.
+    const items = getLocStats(currentLoc, currentMethod).queue;
+    queue.innerHTML = "";
+    const empties = maxSize - items.length;
+    for (let i = 0; i < empties; i++) queue.appendChild(makeEmptySlot());
+    for (const it of items) {
+        queue.appendChild(makeFilledSlot(it.pokedex_id, it.level, it.gender, it.isShiny));
+    }
+}
 
 let sliding = false;
 const pending = [];

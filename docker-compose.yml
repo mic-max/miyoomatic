@@ -7,10 +7,24 @@ services:
       - "8001:8001"
     env_file:
       - .env
+    environment:
+      # Browser origin allowed to call the API. Override to include LAN access, e.g.
+      # "http://localhost:8080,http://192.168.1.5:8080".
+      CORS_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
     volumes:
-      # Source + static. Bind-mounted so edits trigger uvicorn --reload from the host.
+      # Source. Bind-mounted so edits trigger uvicorn --reload from the host.
       - ./pc:/app/pc
       # SQLite file lives at repo root; mount it in so the DB persists across rebuilds.
       - ./miyoomatic.db:/app/miyoomatic.db
     command: ["python", "pc/src/api.py", "--reload"]
+    restart: unless-stopped
+
+  web:
+    image: nginx:alpine
+    container_name: miyoomatic-web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./pc/www:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
