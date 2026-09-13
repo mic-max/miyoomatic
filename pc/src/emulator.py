@@ -15,6 +15,7 @@ SCREENSHOT_INDEX = 0
 A = ord('X')
 B = ord('Z')
 START = win32con.VK_RETURN
+SELECT = win32con.VK_BACK
 UP = win32con.VK_UP
 DOWN = win32con.VK_DOWN
 LEFT = win32con.VK_LEFT
@@ -59,10 +60,18 @@ def find_mgba_window():
     win32gui.EnumWindows(enum_handler, None)
     return hwnds[0] if hwnds else None
 
-def press_key(hwnd, vk):
+def key_down(hwnd, vk):
     win32gui.PostMessage(hwnd, win32con.WM_KEYDOWN, vk, 0)
-    time.sleep(HOLD_KEY)
+
+def key_up(hwnd, vk):
     win32gui.PostMessage(hwnd, win32con.WM_KEYUP, vk, 0)
+
+def press_key(hwnd, vk):
+    # Fixed-length tap. The controller backend drives key_down/key_up directly instead, so
+    # that press duration is decided by the caller the same way it is for the solenoids.
+    key_down(hwnd, vk)
+    time.sleep(HOLD_KEY)
+    key_up(hwnd, vk)
 
 def press_f12_to_window(hwnd):
     # Deliver F12 straight to mGBA's message queue — no SetForegroundWindow, no focus theft.

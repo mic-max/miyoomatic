@@ -6,6 +6,7 @@ import uuid
 
 # Local
 import api_client
+import buttons
 import computer_vision
 import controllers
 import Pokemon
@@ -98,7 +99,7 @@ if __name__ == "__main__":
                     # API will fire the Pushover notification when it persists the encounter.
                     logger.critical(f"Shiny Detected: {name}")
                 else:
-                    controller.send("r")
+                    controller.tap(buttons.B)  # run away
 
                 level = computer_vision.level_roi(
                     cap_result.imgray, cap_result.nametag_rect
@@ -123,3 +124,5 @@ if __name__ == "__main__":
         logger.info("Stopping...")
     finally:
         controller.close()
+        # set all buttons to release so that if the program exits unexpectedly, the buttons are released
+        # controller.release_all()
